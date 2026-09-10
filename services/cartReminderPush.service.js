@@ -88,6 +88,7 @@ function applyPlaceholders(text, vars) {
 }
 
 function buildPushPayload({ customerName, cartSummary }) {
+  const { getAppName } = require('../utils/appName');
   const { itemCount, totalAmount } = cartSummary;
   const itemLabel = itemCount === 1 ? 'item' : 'items';
   const displayName = customerName || 'there';
@@ -98,6 +99,7 @@ function buildPushPayload({ customerName, cartSummary }) {
     itemCount: String(itemCount),
     itemLabel,
     cartTotal: formatInr(totalAmount),
+    appName: getAppName(),
   };
 
   return {

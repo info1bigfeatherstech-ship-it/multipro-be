@@ -7513,7 +7513,7 @@ const downloadBulkUploadTemplate = async (req, res) => {
     }
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'OfferWaleBaba';
+    workbook.creator = require('../utils/appName').getAppName();
     workbook.created = new Date();
     workbook.views = [
       {

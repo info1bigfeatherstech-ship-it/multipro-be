@@ -48,6 +48,7 @@ function buildWishlistUrl(storefront) {
 }
 
 function buildPushPayload({ customerName, itemCount, storefront }) {
+  const { getAppName } = require('../utils/appName');
   const displayName = customerName || 'there';
   const itemLabel = itemCount === 1 ? 'item' : 'items';
   const url = buildWishlistUrl(storefront);
@@ -55,6 +56,7 @@ function buildPushPayload({ customerName, itemCount, storefront }) {
     name: displayName,
     itemCount: String(itemCount),
     itemLabel,
+    appName: getAppName(),
   };
 
   return {

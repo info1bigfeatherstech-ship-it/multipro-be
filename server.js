@@ -46,6 +46,8 @@ const { mongoSanitizeMiddleware } = require('./utils/mongoSanitize');
 // Routes (ACTIVE ONLY)
 const authRoutes = require('./routes/auth.route');
 const adminProductsRoutes = require('./routes/admin-products.route');
+const adminProductLabelsRoutes = require('./routes/admin-product-labels.route');
+const productLabelsRoutes = require('./routes/product-labels.route');
 const categoriesRoutes = require('./routes/categories.route');
 const productsRoutes = require('./routes/products.route');
 const wishlistRoutes = require('./routes/wishlist.route');
@@ -727,6 +729,8 @@ app.get('/api', (req, res) => {
       wishlist: '/api/wishlist',
       addresses: '/api/addresses',
       adminProducts: '/api/admin/products',
+      adminProductLabels: '/api/admin/product-labels',
+      productLabels: '/api/product-labels',
       adminAnalytics: '/api/admin/analytics',
       adminSeoAnalytics: '/api/admin/seo-analytics',
       adminOrders: '/api/admin/orders',
@@ -746,6 +750,8 @@ app.get('/api', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/admin/products', adminProductsRoutes);
+app.use('/api/admin/product-labels', adminProductLabelsRoutes);
+app.use('/api/product-labels', productLabelsRoutes);
 app.use('/api/categories', categoriesRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/wishlist', wishlistRoutes);
@@ -841,6 +847,15 @@ async function startApplication() {
     initCloudinary();
     await connectMongoDB();
     setupMongoDBEventHandlers();
+
+    try {
+      const { ensureDefaultProductLabels } = require('./services/productLabel.service');
+      await ensureDefaultProductLabels();
+    } catch (labelSeedErr) {
+      logger.error(`[productLabel] Default label seed failed: ${labelSeedErr.message}`, {
+        stack: labelSeedErr.stack,
+      });
+    }
 
     // Connect to Redis (non-blocking in non-prod; bubbled up in prod by redis.config).
     try {

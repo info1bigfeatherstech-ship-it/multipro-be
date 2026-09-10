@@ -74,7 +74,7 @@ async function fetchImageBuffer(sourceUrl) {
       signal: controller.signal,
       headers: {
         Accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-        'User-Agent': 'OfferWaleBaba-PushPreview/1.0',
+        'User-Agent': `${require('./appName').getAppNameToken()}-PushPreview/1.0`,
       },
     });
     if (!res.ok) {

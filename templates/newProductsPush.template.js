@@ -1,12 +1,13 @@
 /**
  * New products digest web push copy.
  * Click targets (see storefrontFrontendUrl.js):
- * - ecomm:     https://offerwalebaba.com/#best-sellers
- * - wholesale: https://offerwalebaba.in/TagProducts/today-arrival
+ * - ecomm:     /#best-sellers
+ * - wholesale: /TagProducts/today-arrival
+ * Placeholders: {{appName}}
  */
 module.exports = {
-  title: 'New products on Offer Wale Baba',
-  body: 'Explore latest arrivals on Offer Wale Baba.',
+  title: 'New products on {{appName}}',
+  body: 'Explore latest arrivals on {{appName}}.',
   icon: '/pwa-192x192.png',
   badge: '/pwa-192x192.png',
   tag: 'new-products-digest',

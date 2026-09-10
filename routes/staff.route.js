@@ -6,7 +6,7 @@
  * so Express does not treat "profile" as a staff id.
  *
  * @version 2.1.0
- * @author OfferWaleBaba Team
+ * @author Backend Team
  */
 
 const express = require('express');

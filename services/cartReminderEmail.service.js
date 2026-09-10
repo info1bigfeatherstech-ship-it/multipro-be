@@ -31,7 +31,8 @@ function getMarketingEmailPassword() {
 }
 
 function getMarketingFromAddress() {
-  const fromName = String(process.env.MARKETING_EMAIL_FROM_NAME || 'OfferWaaleBaba').trim();
+  const { getAppName } = require('../utils/appName');
+  const fromName = String(process.env.MARKETING_EMAIL_FROM_NAME || getAppName()).trim();
   const fromEmail = getMarketingEmailUser();
   return `"${fromName}" <${fromEmail}>`;
 }
@@ -179,6 +180,8 @@ function buildCartItemsText(rows) {
 }
 
 function buildEmailContent({ customerName, cartSummary }) {
+  const { getAppName } = require('../utils/appName');
+  const appName = getAppName();
   const { rows, itemCount, totalAmount } = cartSummary;
   const itemLabel = itemCount === 1 ? 'item' : 'items';
   const cartUrl = getStorefrontCartUrl();
@@ -189,8 +192,9 @@ function buildEmailContent({ customerName, cartSummary }) {
 
   const vars = {
     name: displayName,
+    appName,
     greeting: applyPlaceholders(cartReminderTemplate.greeting, { name: escapeHtml(displayName) }),
-    intro: cartReminderTemplate.intro,
+    intro: applyPlaceholders(cartReminderTemplate.intro, { appName }),
     itemCount: String(itemCount),
     itemLabel,
     cartTotal: formatInr(totalAmount),
@@ -206,10 +210,11 @@ function buildEmailContent({ customerName, cartSummary }) {
   };
 
   const html = applyPlaceholders(cartReminderTemplate.htmlLayout, vars);
+  const introText = applyPlaceholders(cartReminderTemplate.intro, { appName });
   const text = [
     greetingText,
     '',
-    cartReminderTemplate.intro,
+    introText,
     '',
     vars.itemsSectionTitle,
     buildCartItemsText(rows),
@@ -220,7 +225,7 @@ function buildEmailContent({ customerName, cartSummary }) {
   ].join('\n');
 
   return {
-    subject: cartReminderTemplate.subject,
+    subject: applyPlaceholders(cartReminderTemplate.subject, { appName }),
     html,
     text
   };

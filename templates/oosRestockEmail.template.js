@@ -1,9 +1,9 @@
 /**
  * Back-in-stock email + web-push copy for OOS inquiry waitlist.
- * Placeholders: {{productName}}, {{productUrl}}, {{ctaLabel}}, {{greeting}}, {{intro}}, {{stockLine}}, {{footer}}
+ * Placeholders: {{productName}}, {{productUrl}}, {{ctaLabel}}, {{greeting}}, {{intro}}, {{stockLine}}, {{footer}}, {{appName}}
  */
 module.exports = {
-  subject: '{{productName}} is back in stock at OfferWaaleBaba',
+  subject: '{{productName}} is back in stock at {{appName}}',
 
   greeting: 'Good news!',
 
@@ -18,9 +18,9 @@ module.exports = {
   // Web push (browser / PWA)
   // Title: product name only. Brand stays in body + logo icon/badge.
   // Large `image` = landscape letterboxed product preview (generated at send-time).
-  pushBrandName: 'Offer Wale Baba',
+  pushBrandName: '{{appName}}',
   pushTitle: '{{productName}}',
-  pushBody: 'Back in stock on Offer Wale Baba. Tap to view and order.',
+  pushBody: 'Back in stock on {{appName}}. Tap to view and order.',
   pushBadgePath: '/pwa-192x192.png',
   pushIconPath: '/pwa-192x192.png',
   pushTagPrefix: 'oos-restock',
@@ -37,11 +37,11 @@ module.exports = {
   moqTextBody:
     '{{productName}} is now available for wholesale order.\nEnough stock is now available to meet the wholesale minimum order quantity.',
   moqPushTitle: '{{productName}}',
-  moqPushBody: 'Now available for wholesale on Offer Wale Baba. Tap to order.',
+  moqPushBody: 'Now available for wholesale on {{appName}}. Tap to order.',
 
   htmlLayout: `
 <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;padding:24px;border:1px solid #eee;border-radius:10px;">
-  <h2 style="margin:0 0 12px 0;color:#1a1a1a;font-size:20px;">OfferWaaleBaba</h2>
+  <h2 style="margin:0 0 12px 0;color:#1a1a1a;font-size:20px;">{{appName}}</h2>
   <p style="color:#444;line-height:1.6;margin:0 0 8px 0;font-weight:600;">{{greeting}}</p>
   <p style="color:#555;line-height:1.6;margin:0 0 16px 0;">
     {{stockLine}}
@@ -54,4 +54,3 @@ module.exports = {
 </div>
 `.trim(),
 };
-

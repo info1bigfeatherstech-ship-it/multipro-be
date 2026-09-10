@@ -14,6 +14,7 @@
  */
 
 const nodemailer = require('nodemailer');
+const { getAppName } = require('../utils/appName');
 
 // Fallback used only when the caller does not supply explicit expiry minutes.
 // (Kept in sync with otp-delivery.config DEFAULT_OTP_EXPIRY_MINUTES.)
@@ -41,36 +42,36 @@ const getTransporter = () => {
   return cachedTransporter;
 };
 
-// Templates keyed by purpose. Adding a new purpose? Just add an entry here.
-const TEMPLATES = {
+// Templates keyed by purpose. Brand comes from APP_NAME at send time.
+const buildTemplates = (appName) => ({
   registration: {
-    subject: 'Verify your account — OfferWaleBaba',
-    title: 'Welcome to OfferWaleBaba',
+    subject: `Verify your account — ${appName}`,
+    title: `Welcome to ${appName}`,
     intro: 'Use the OTP below to verify your account and complete registration.'
   },
   password_reset: {
-    subject: 'Password Reset OTP — OfferWaleBaba',
+    subject: `Password Reset OTP — ${appName}`,
     title: 'Password Reset Request',
     intro: 'Use the OTP below to reset your password.'
   },
   contact_change: {
-    subject: 'Confirm contact change — OfferWaleBaba',
+    subject: `Confirm contact change — ${appName}`,
     title: 'Contact Update Confirmation',
     intro: 'Use the OTP below to confirm your contact details change.'
   },
   wholesaler_activation: {
-    subject: 'Wholesaler Account Activation OTP — OfferWaleBaba',
+    subject: `Wholesaler Account Activation OTP — ${appName}`,
     title: 'Wholesaler Activation',
     intro: 'Use the OTP below to activate your wholesaler account.'
   },
   generic: {
-    subject: 'Your OTP — OfferWaleBaba',
+    subject: `Your OTP — ${appName}`,
     title: 'One-Time Password',
     intro: 'Use the OTP below to continue.'
   }
-};
+});
 
-const renderHtml = (otp, tpl, minutes) => `
+const renderHtml = (otp, tpl, minutes, appName) => `
   <div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;border:1px solid #eee;border-radius:8px;">
     <h2 style="margin:0 0 8px 0;color:#222;">${tpl.title}</h2>
     <p style="color:#555;line-height:1.5;">${tpl.intro}</p>
@@ -78,12 +79,12 @@ const renderHtml = (otp, tpl, minutes) => `
       ${otp}
     </div>
     <p style="color:#888;font-size:13px;">This OTP is valid for ${minutes} minute${minutes === 1 ? '' : 's'}. If you didn't request it, please ignore this email.</p>
-    <p style="color:#aaa;font-size:12px;margin-top:24px;">— OfferWaleBaba</p>
+    <p style="color:#aaa;font-size:12px;margin-top:24px;">— ${appName}</p>
   </div>
 `;
 
-const renderText = (otp, tpl, minutes) =>
-  `${tpl.title}\n\n${tpl.intro}\n\nOTP: ${otp}\n\nThis OTP is valid for ${minutes} minute${minutes === 1 ? '' : 's'}.\n\n— OfferWaleBaba`;
+const renderText = (otp, tpl, minutes, appName) =>
+  `${tpl.title}\n\n${tpl.intro}\n\nOTP: ${otp}\n\nThis OTP is valid for ${minutes} minute${minutes === 1 ? '' : 's'}.\n\n— ${appName}`;
 
 /**
  * Send an OTP via email.
@@ -111,17 +112,19 @@ const sendEmailOTP = async ({ to, otp, purpose = 'generic', minutes } = {}) => {
     throw err;
   }
 
-  const tpl = TEMPLATES[purpose] || TEMPLATES.generic;
+  const appName = getAppName();
+  const templates = buildTemplates(appName);
+  const tpl = templates[purpose] || templates.generic;
   const expiryMinutes =
     Number.isFinite(minutes) && minutes > 0 ? Math.floor(minutes) : FALLBACK_EXPIRY_MINUTES;
   const transporter = getTransporter();
 
   const info = await transporter.sendMail({
-    from: `"OfferWaleBaba" <${process.env.EMAIL_USER}>`,
+    from: `"${appName}" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: tpl.subject,
-    text: renderText(otp, tpl, expiryMinutes),
-    html: renderHtml(otp, tpl, expiryMinutes)
+    text: renderText(otp, tpl, expiryMinutes, appName),
+    html: renderHtml(otp, tpl, expiryMinutes, appName)
   });
 
   return {

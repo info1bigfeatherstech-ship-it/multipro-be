@@ -3,6 +3,8 @@
  * Not legal advice; configure STORE_* env for production seller identity.
  */
 
+const { getAppName } = require('./appName');
+
 const roundMoney2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
 function normalizeState(s) {
@@ -215,7 +217,7 @@ function formatAmount(amount) {
   return roundMoney2(Number(amount) || 0).toFixed(2);
 }
 
-/** Title-style brand name — e.g. "offer wale baba" → "Offer Wale Baba". */
+/** Title-style brand name — e.g. "fab uniqo" → "Fab Uniqo". */
 function formatBrandDisplayName(name) {
   return String(name || 'Seller')
     .trim()
@@ -245,7 +247,7 @@ function gstTaxCell(line, interstate) {
 }
 
 function buildGstInvoiceHtml(vm) {
-  const brandName = formatBrandDisplayName(vm.seller.legalName || 'Offer Wale Baba');
+  const brandName = formatBrandDisplayName(vm.seller.legalName || getAppName());
   const buyerLines = addressLinesHtml(vm.buyer.addressLines || vm.buyer.address);
   const sellerLines = addressLinesHtml(
     String(vm.seller.address || '')

@@ -3,7 +3,7 @@
  * 
  * @description Complete staff management system with role-based access control
  * @version 11.0.0
- * @author OfferWaleBaba Team
+ * @author Backend Team
  * @license Proprietary
  * 
  * Features:
@@ -21,6 +21,7 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const redisManager = require('../config/redis.config');
+const { getAppName } = require('../utils/appName');
 
 // ==============================
 // CONSTANTS & CONFIGURATION
@@ -170,7 +171,7 @@ const verifyOTP = async (adminId, staffId, otp) => {
  */
 const sendOTPToAdmin = async (adminEmail, adminName, staffName, otp) => {
   const mailOptions = {
-    from: `"OfferWaleBaba Security" <${EMAIL_FROM}>`,
+    from: `"${getAppName()} Security" <${EMAIL_FROM}>`,
     to: adminEmail,
     subject: ' Staff Password Reset Verification',
     html: `
@@ -237,7 +238,7 @@ const sendOTPToAdmin = async (adminEmail, adminName, staffName, otp) => {
  */
 const sendResetConfirmation = async (adminEmail, adminName, staffName) => {
   const mailOptions = {
-    from: `"OfferWaleBaba Security" <${EMAIL_FROM}>`,
+    from: `"${getAppName()} Security" <${EMAIL_FROM}>`,
     to: adminEmail,
     subject: 'Staff Password Reset Successful',
     html: `
@@ -365,7 +366,7 @@ const selfResetFailKey = (storefront, adminId) =>
 const sendSelfPasswordResetOTP = async (adminEmail, adminName, otp, storefront) => {
   const scopeLabel = storefront === 'wholesale' ? 'Wholesale' : 'E-commerce';
   const mailOptions = {
-    from: `"OfferWaleBaba Security" <${EMAIL_FROM}>`,
+    from: `"${getAppName()} Security" <${EMAIL_FROM}>`,
     to: adminEmail,
     subject: `Admin Password Reset Verification (${scopeLabel})`,
     html: `
@@ -415,7 +416,7 @@ const sendSelfPasswordResetOTP = async (adminEmail, adminName, otp, storefront) 
 const sendSelfPasswordResetConfirmation = async (adminEmail, adminName, storefront) => {
   const scopeLabel = storefront === 'wholesale' ? 'Wholesale' : 'E-commerce';
   const mailOptions = {
-    from: `"OfferWaleBaba Security" <${EMAIL_FROM}>`,
+    from: `"${getAppName()} Security" <${EMAIL_FROM}>`,
     to: adminEmail,
     subject: `Admin Password Updated (${scopeLabel})`,
     html: `

@@ -42,6 +42,8 @@ function buildActiveProductQuery(storefront, sinceDate) {
 }
 
 function buildPayload(storefront) {
+  const { getAppName } = require('../utils/appName');
+  const appName = getAppName();
   const sf = normalizeCustomerStorefront(storefront);
   const path =
     sf === 'wholesale'
@@ -50,10 +52,11 @@ function buildPayload(storefront) {
         '/TagProducts/today-arrival'
       : newProductsPushTemplate.ctaPath || '/#best-sellers';
   const url = buildStorefrontUrl(sf, path);
+  const fill = (text) => String(text || '').split('{{appName}}').join(appName);
 
   return {
-    title: newProductsPushTemplate.title,
-    body: newProductsPushTemplate.body,
+    title: fill(newProductsPushTemplate.title),
+    body: fill(newProductsPushTemplate.body),
     icon: resolvePushAssetUrl(newProductsPushTemplate.icon, sf),
     badge: resolvePushAssetUrl(
       newProductsPushTemplate.badge || newProductsPushTemplate.icon,

@@ -64,7 +64,8 @@ function getMarketingEmailPassword() {
 }
 
 function getMarketingFromAddress() {
-  const fromName = String(process.env.MARKETING_EMAIL_FROM_NAME || 'OfferWaaleBaba').trim();
+  const { getAppName } = require('../utils/appName');
+  const fromName = String(process.env.MARKETING_EMAIL_FROM_NAME || getAppName()).trim();
   const fromEmail = getMarketingEmailUser();
   return `"${fromName}" <${fromEmail}>`;
 }
@@ -345,6 +346,8 @@ async function sendRestockEmail(inquiry, ctx) {
         textBody: `${productName} is back in stock.\n${template.intro}`,
       };
 
+  const { getAppName } = require('../utils/appName');
+  const appName = getAppName();
   const map = {
     productName: escapeHtml(productName),
     productUrl,
@@ -353,10 +356,11 @@ async function sendRestockEmail(inquiry, ctx) {
     stockLine: fillTemplate(copy.stockLine, { productName: escapeHtml(productName) }),
     ctaLabel: copy.ctaLabel,
     footer: copy.footer,
+    appName: escapeHtml(appName),
   };
-  const subject = fillTemplate(copy.subject, { productName });
+  const subject = fillTemplate(copy.subject, { productName, appName });
   const html = fillTemplate(template.htmlLayout, map);
-  const text = `${copy.greeting}\n\n${fillTemplate(copy.textBody, { productName })}\n\n${productUrl}\n`;
+  const text = `${copy.greeting}\n\n${fillTemplate(copy.textBody, { productName, appName })}\n\n${productUrl}\n`;
 
   await transporter.sendMail({
     from: getMarketingFromAddress(),
@@ -522,12 +526,14 @@ async function sendRestockWebPush(inquiry, ctx, resolvedUserId = null) {
   const titleTemplate = moqCopy
     ? template.moqPushTitle || '{{productName}}'
     : template.pushTitle || '{{productName}}';
+  const { getAppName } = require('../utils/appName');
+  const appName = getAppName();
   const bodyTemplate = moqCopy
     ? template.moqPushBody ||
-      'Now available for wholesale on Offer Wale Baba. Tap to order.'
-    : template.pushBody || 'Back in stock on Offer Wale Baba. Tap to view and order.';
-  const title = fillTemplate(titleTemplate, { productName: productNameForTitle }).slice(0, 80);
-  const body = fillTemplate(bodyTemplate, { productName }).slice(0, 180);
+      `Now available for wholesale on ${appName}. Tap to order.`
+    : template.pushBody || `Back in stock on ${appName}. Tap to view and order.`;
+  const title = fillTemplate(titleTemplate, { productName: productNameForTitle, appName }).slice(0, 80);
+  const body = fillTemplate(bodyTemplate, { productName, appName }).slice(0, 180);
   const brandAssetPath =
     template.pushBadgePath || template.pushIconPath || '/pwa-192x192.png';
   const brandAssetUrl = resolvePushAssetUrl(brandAssetPath, sf);
@@ -559,8 +565,8 @@ async function sendRestockWebPush(inquiry, ctx, resolvedUserId = null) {
     body:
       body ||
       (moqCopy
-        ? 'Now available for wholesale on Offer Wale Baba. Tap to order.'
-        : 'Back in stock on Offer Wale Baba. Tap to view and order.'),
+        ? `Now available for wholesale on ${appName}. Tap to order.`
+        : `Back in stock on ${appName}. Tap to view and order.`),
     icon: brandIcon,
     badge: brandIcon,
     image:

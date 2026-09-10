@@ -242,23 +242,25 @@ const sendPasswordChangedNotificationEmail = async (user) => {
   if (!email) return;
 
   try {
+    const { getAppName } = require('../utils/appName');
+    const appName = getAppName();
     await transporter.sendMail({
-      from: `"OfferWaleBaba" <${process.env.EMAIL_USER}>`,
+      from: `"${appName}" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: 'Your password was changed — OfferWaleBaba',
+      subject: `Your password was changed — ${appName}`,
       text:
         `Hi ${user.name || 'there'},\n\n` +
-        'Your OfferWaleBaba account password was changed successfully.\n\n' +
+        `Your ${appName} account password was changed successfully.\n\n` +
         'If you made this change, no further action is needed.\n' +
         'If you did not change your password, please change your password immediately or contact Support Team.\n\n' +
-        '— OfferWaleBaba',
+        `— ${appName}`,
       html:
         `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;border:1px solid #eee;border-radius:8px;">` +
         `<h2 style="margin:0 0 8px 0;color:#222;">Password changed</h2>` +
         `<p style="color:#555;line-height:1.5;">Hi ${user.name || 'there'},</p>` +
-        `<p style="color:#555;line-height:1.5;">Your OfferWaleBaba account password was changed successfully.</p>` +
+        `<p style="color:#555;line-height:1.5;">Your ${appName} account password was changed successfully.</p>` +
         `<p style="color:#555;line-height:1.5;">If you made this change, no further action is needed. If you did not change your password, please change Password or contact Support Team.</p>` +
-        `<p style="color:#aaa;font-size:12px;margin-top:24px;">— OfferWaleBaba</p>` +
+        `<p style="color:#aaa;font-size:12px;margin-top:24px;">— ${appName}</p>` +
         `</div>`
     });
   } catch (err) {

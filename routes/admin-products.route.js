@@ -7,8 +7,9 @@ const { uploadProductImages, uploadCSVFile, uploadBulkNewProductFiles } = requir
 const productController = require('../controllers/product.controller');
 const updateProductTagController = require('../controllers/updateProductTag.controller');
 
-const readRoles = authorizeRoles('admin', 'product_manager', 'inventory_manager');
+const readRoles = authorizeRoles('admin', 'product_manager', 'inventory_manager', 'marketing_manager');
 const writeRoles = authorizeRoles('admin', 'product_manager');
+const labelAssignRoles = authorizeRoles('admin', 'product_manager', 'marketing_manager');
 const inventoryWriteRoles = authorizeRoles('admin', 'product_manager', 'inventory_manager');
 
 // Validation middleware to check for rejected fields
@@ -75,7 +76,7 @@ router.get('/export-csv', writeRoles, productController.exportProductsCSV);
 router.delete('/bulk-hard-delete', writeRoles, productController.bulkHardDelete);
 router.get('/active', readRoles, productController.getAllActiveProducts);
 
-router.put('/updateFlags', writeRoles, updateProductTagController);
+router.put('/updateFlags', labelAssignRoles, updateProductTagController);
 
 // =============================================
 // SINGLE PRODUCT ACTIONS (with :slug, :productCode)
