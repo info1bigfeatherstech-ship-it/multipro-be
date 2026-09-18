@@ -137,7 +137,7 @@ const BULK_UPLOAD_COLUMNS = [
     format: 'Key:Value | Key:Value',
     example: 'Design:1',
     notes:
-      'Variant-specific attributes that differentiate rows of the same product. Pipe (|) between pairs, colon between key and value.',
+      'VARIANT OPTIONS (Flipkart-style). Pipe (|) between pairs, colon between key and value. Example: Color:Red | Size:M. Each row of the same product must have a UNIQUE combination. Use consistent key names (Color, Size, Pack).',
   },
   {
     key: 'weight',
@@ -245,7 +245,8 @@ const BULK_UPLOAD_COLUMNS = [
     dataType: 'Text',
     format: 'Key:Value | Key:Value',
     example: 'Material:Plastic | Warranty:6 Months',
-    notes: 'Non-variant product specs. Same across all variant rows of a product.',
+    notes:
+      'PRODUCT SPECS (non-variant). Same across all rows of a product. Example: Material:Cotton | Warranty:1 Year. Do NOT put Color/Size here — those belong in variantAttributes.',
   },
   {
     key: 'images',
@@ -599,7 +600,7 @@ function buildInstructionsAoa() {
     '',
   ]);
   rows.push([
-    '6. Attributes format: Key:Value | Key:Value (pipe between pairs, colon between key and value).',
+    '6. Attributes format: Key:Value | Key:Value (pipe between pairs, colon between key and value). variantAttributes = Color/Size etc per row; productAttributes = Material/Warranty shared across the product. Invalid format fails the row.',
     '',
     '',
     '',

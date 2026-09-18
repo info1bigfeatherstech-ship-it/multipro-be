@@ -37,6 +37,10 @@ const {
   propagateProductChannelStatusToVariants,
   reconcileProductCatalogState
 } = require("../utils/storefrontCatalog");
+const {
+  normalizeAttributePairs,
+  attributeSignature,
+} = require('../services/catalogAttribute.service');
 
 
 // =============================================
@@ -1310,13 +1314,21 @@ const createProduct = async (req, res) => {
 
       const isActiveFlag = v.isActive !== false;
       const wholesaleEligible = wholesale && Number(priceObj.wholesaleBase) > 0;
+      let variantAttrs = [];
+      try {
+        variantAttrs = normalizeAttributePairs(v.attributes);
+      } catch (attrErr) {
+        return res.status(400).json({
+          success: false,
+          code: attrErr.code || 'INVALID_ATTRIBUTES',
+          message: `Variant ${i} attributes invalid: ${attrErr.message}`,
+        });
+      }
       const variantDoc = {
         sku: skuVal,
         productCode,
         wholesale,
-        attributes: Array.isArray(v.attributes)
-          ? v.attributes.map(a => ({ key: a.key, value: a.value }))
-          : [],
+        attributes: variantAttrs,
         price: priceObj,
         minimumOrderQuantity: moq,
         inventory: inventoryObj,
@@ -1358,6 +1370,31 @@ const createProduct = async (req, res) => {
         success: false,
         message: "Invalid JSON format in request body"
       });
+    }
+
+    try {
+      parsedAttributes = normalizeAttributePairs(parsedAttributes);
+    } catch (attrErr) {
+      return res.status(400).json({
+        success: false,
+        code: attrErr.code || 'INVALID_ATTRIBUTES',
+        message: attrErr.message || 'Invalid product attributes',
+      });
+    }
+
+    // Reject duplicate variant attribute signatures within the same create payload
+    const sigs = new Set();
+    for (let i = 0; i < variants.length; i++) {
+      const sig = attributeSignature(variants[i].attributes);
+      if (!sig) continue;
+      if (sigs.has(sig)) {
+        return res.status(400).json({
+          success: false,
+          code: 'DUPLICATE_VARIANT_ATTRIBUTES',
+          message: `Variants have duplicate option combinations (index ${i}). Each variant needs unique attributes.`,
+        });
+      }
+      sigs.add(sig);
     }
 
     const shippingValidation = validateRequiredShippingFields(parsedShipping);
@@ -2402,11 +2439,14 @@ async function processProductWithRollback(productName, productRows, stats) {
           continue;
         }
         
-        // Check for duplicate attributes
-        const attributeMatch = existingProduct.variants.some(v => 
-          JSON.stringify(v.attributes) === JSON.stringify(variant.attributes)
-        );
-        
+        // Check for duplicate attributes (order-independent)
+        const incomingSig = attributeSignature(variant.attributes);
+        const attributeMatch =
+          Boolean(incomingSig) &&
+          existingProduct.variants.some(
+            (v) => attributeSignature(v.attributes) === incomingSig
+          );
+
         if (attributeMatch) {
           stats.skipped.push({
             product: productName,
@@ -2474,14 +2514,15 @@ async function buildVariantWithValidation(row, productName, options = {}) {
     throw new Error(`Sale price (${cleanSalePrice}) must be less than base price (${cleanBasePrice}) (Row ${row.rowNumber})`);
   }
   
-  // Attributes
-  const variantAttributes = row.variantAttributes
-    ? row.variantAttributes.split("|").map((pair) => {
-        const [key, value] = pair.split(":");
-        return { key: key?.trim(), value: value?.trim() };
-      }).filter(attr => attr.key && attr.value)
-    : [];
-  
+  // Attributes (Key:Value | Key:Value) — fail loud on bad format
+  let variantAttributes = [];
+  try {
+    variantAttributes = normalizeAttributePairs(row.variantAttributes);
+  } catch (attrErr) {
+    throw new Error(
+      `Invalid variantAttributes (Row ${row.rowNumber}): ${attrErr.message || 'use Key:Value | Key:Value'}`
+    );
+  } 
   // Images with retry
   let imagesArr = [];
   if (row.images) {
@@ -3292,16 +3333,15 @@ async function buildCompleteVariant(row, productName, images, options = {}) {
   const wholesaleSale = wholesaleCfg.wholesaleSale;
   const minimumOrderQuantity = wholesaleCfg.minimumOrderQuantity;
   
-  // Parse attributes
-  const parseAttributes = (attrString) => {
-    if (!attrString) return [];
-    return attrString.split("|").map(item => {
-      const [key, value] = item.split(":");
-      return { key: key?.trim(), value: value?.trim() };
-    }).filter(attr => attr.key && attr.value);
-  };
-  
-  const variantAttributes = parseAttributes(row.variantAttributes);
+  // Parse attributes — invalid format must fail the row (not silently drop)
+  let variantAttributes = [];
+  try {
+    variantAttributes = normalizeAttributePairs(row.variantAttributes);
+  } catch (attrErr) {
+    throw new Error(
+      `Invalid variantAttributes for ${productName}: ${attrErr.message || 'use Key:Value | Key:Value'}`
+    );
+  }
   const sku = resolveVariantSku({ productCode, explicitSku: row.sku });
   const wholesaleEligible = wholesaleCfg.wholesaleEligible;
 
@@ -3641,14 +3681,14 @@ const bulkUploadNewProductsWithImages = async (req, res) => {
           const finalHsnCode = row.hsnCode?.trim().toUpperCase() || null;
           const finalgstRate = row.gstRate ? parseFloat(row.gstRate) : null;
           const finalIsFragile = parseBoolean(row.isFragile);
-          const parseAttributes = (attrString) => {
-            if (!attrString) return [];
-            return attrString.split("|").map(item => {
-              const [key, value] = item.split(":");
-              return { key: key?.trim(), value: value?.trim() };
-            }).filter(attr => attr.key && attr.value);
-          };
-          const productAttributes = parseAttributes(row.productAttributes);
+          let productAttributes = [];
+          try {
+            productAttributes = normalizeAttributePairs(row.productAttributes);
+          } catch (attrErr) {
+            throw new Error(
+              `Invalid productAttributes for "${row.name}": ${attrErr.message || 'use Key:Value | Key:Value'}`
+            );
+          }
 
           if (product) {
             // If product already has variants, incoming productCode base must match existing base.
@@ -3668,13 +3708,16 @@ const bulkUploadNewProductsWithImages = async (req, res) => {
               }
             }
 
-            // Check for duplicate variant attributes
-            const variantExists = product.variants.some(v => 
-              JSON.stringify(v.attributes) === JSON.stringify(newVariant.attributes)
-            );
-            
+            // Duplicate option combo (order-independent signature)
+            const incomingSig = attributeSignature(newVariant.attributes);
+            const variantExists =
+              Boolean(incomingSig) &&
+              product.variants.some((v) => attributeSignature(v.attributes) === incomingSig);
+
             if (variantExists) {
-              throw new Error(`Variant with same attributes already exists for product ${row.name}`);
+              throw new Error(
+                `Variant with same options (${incomingSig}) already exists for product ${row.name}`
+              );
             }
 
             const duplicateCodeInSameProduct = product.variants.some(
@@ -4920,17 +4963,27 @@ const updateProduct = async (req, res) => {
       }
 
       if (updates.attributes !== undefined) {
-        const parsed = parseIfString(updates.attributes, []);
-        variant.attributes = Array.isArray(parsed)
-          ? parsed.filter((a) => a && a.key && a.value).map((a) => ({ key: a.key, value: a.value }))
-          : [];
+        try {
+          variant.attributes = normalizeAttributePairs(updates.attributes);
+        } catch (attrErr) {
+          return res.status(400).json({
+            success: false,
+            code: attrErr.code || 'INVALID_ATTRIBUTES',
+            message: attrErr.message || 'Invalid variant attributes',
+          });
+        }
       }
 
       if (updates.variantAttributes !== undefined) {
-        const parsed = parseIfString(updates.variantAttributes, []);
-        variant.attributes = Array.isArray(parsed)
-          ? parsed.filter((a) => a && a.key && a.value).map((a) => ({ key: a.key, value: a.value }))
-          : [];
+        try {
+          variant.attributes = normalizeAttributePairs(updates.variantAttributes);
+        } catch (attrErr) {
+          return res.status(400).json({
+            success: false,
+            code: attrErr.code || 'INVALID_ATTRIBUTES',
+            message: attrErr.message || 'Invalid variant attributes',
+          });
+        }
       }
 
       if (updates.price !== undefined) {

@@ -47,6 +47,7 @@ const { mongoSanitizeMiddleware } = require('./utils/mongoSanitize');
 const authRoutes = require('./routes/auth.route');
 const adminProductsRoutes = require('./routes/admin-products.route');
 const adminProductLabelsRoutes = require('./routes/admin-product-labels.route');
+const adminCatalogAttributesRoutes = require('./routes/admin-catalog-attributes.route');
 const productLabelsRoutes = require('./routes/product-labels.route');
 const categoriesRoutes = require('./routes/categories.route');
 const productsRoutes = require('./routes/products.route');
@@ -751,6 +752,7 @@ app.get('/api', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/admin/products', adminProductsRoutes);
 app.use('/api/admin/product-labels', adminProductLabelsRoutes);
+app.use('/api/admin/catalog-attributes', adminCatalogAttributesRoutes);
 app.use('/api/product-labels', productLabelsRoutes);
 app.use('/api/categories', categoriesRoutes);
 app.use('/api/products', productsRoutes);
@@ -854,6 +856,15 @@ async function startApplication() {
     } catch (labelSeedErr) {
       logger.error(`[productLabel] Default label seed failed: ${labelSeedErr.message}`, {
         stack: labelSeedErr.stack,
+      });
+    }
+
+    try {
+      const { ensureDefaultCatalogAttributes } = require('./services/catalogAttribute.service');
+      await ensureDefaultCatalogAttributes();
+    } catch (attrSeedErr) {
+      logger.error(`[catalogAttribute] Default attribute seed failed: ${attrSeedErr.message}`, {
+        stack: attrSeedErr.stack,
       });
     }
 
