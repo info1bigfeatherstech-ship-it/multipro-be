@@ -480,7 +480,8 @@ const deleteCategory = async (req, res) => {
     if (childCategories > 0) {
       return res.status(400).json({
         success: false,
-        message: `Cannot delete category. ${childCategories} active subcategory(s) exist.`
+        code: 'CATEGORY_HAS_CHILDREN',
+        message: `Cannot delete category. ${childCategories} active subcategory(s) exist. Remove or reassign those subcategories first.`,
       });
     }
 
@@ -491,7 +492,8 @@ const deleteCategory = async (req, res) => {
     if (productCount > 0) {
       return res.status(400).json({
         success: false,
-        message: `Cannot delete category. ${productCount} product(s) are using this category.`
+        code: 'CATEGORY_HAS_PRODUCTS',
+        message: `Cannot delete category. ${productCount} product(s) are using this category. Reassign or remove those products first.`,
       });
     }
 

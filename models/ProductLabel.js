@@ -54,6 +54,30 @@ const productLabelSchema = new mongoose.Schema(
       default: true,
     },
 
+    /**
+     * When true (and isActive), render this label as a product section on the homepage.
+     * Independent of showInNav — nav and homepage can be configured separately.
+     */
+    showOnHomepage: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
+    /** Sort order for homepage sections only (lower first). */
+    homepageSortOrder: {
+      type: Number,
+      default: 100,
+    },
+
+    /** Max products to show in the homepage section for this label (1–48). */
+    homepageLimit: {
+      type: Number,
+      default: 10,
+      min: 1,
+      max: 48,
+    },
+
     sortOrder: {
       type: Number,
       default: 0,
@@ -87,5 +111,6 @@ const productLabelSchema = new mongoose.Schema(
 
 productLabelSchema.index({ isActive: 1, sortOrder: 1, name: 1 });
 productLabelSchema.index({ storefronts: 1, isActive: 1, showInNav: 1 });
+productLabelSchema.index({ storefronts: 1, isActive: 1, showOnHomepage: 1, homepageSortOrder: 1 });
 
 module.exports = mongoose.model('ProductLabel', productLabelSchema);

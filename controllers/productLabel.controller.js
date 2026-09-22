@@ -13,6 +13,23 @@ const {
 } = require('../services/productLabel.service');
 const logger = require('../utils/logger');
 
+const HOMEPAGE_LIMIT_DEFAULT = 10;
+const HOMEPAGE_LIMIT_MIN = 1;
+const HOMEPAGE_LIMIT_MAX = 48;
+const HOMEPAGE_SORT_DEFAULT = 100;
+
+function normalizeHomepageLimit(value, fallback = HOMEPAGE_LIMIT_DEFAULT) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(HOMEPAGE_LIMIT_MAX, Math.max(HOMEPAGE_LIMIT_MIN, Math.round(n)));
+}
+
+function normalizeHomepageSortOrder(value, fallback = HOMEPAGE_SORT_DEFAULT) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.round(n);
+}
+
 function sendError(res, err, fallbackMessage) {
   const code = err?.code;
   const statusByCode = {
@@ -93,6 +110,13 @@ async function createLabel(req, res) {
         : 100;
     const isActive = req.body?.isActive === false ? false : true;
     const showInNav = req.body?.showInNav === false ? false : true;
+    // Homepage opt-in must be explicit (default false) so existing labels stay off homepage.
+    const showOnHomepage = req.body?.showOnHomepage === true;
+    const homepageSortOrder = normalizeHomepageSortOrder(
+      req.body?.homepageSortOrder,
+      HOMEPAGE_SORT_DEFAULT
+    );
+    const homepageLimit = normalizeHomepageLimit(req.body?.homepageLimit, HOMEPAGE_LIMIT_DEFAULT);
     const description = String(req.body?.description || '').trim().slice(0, 300);
 
     const label = await ProductLabel.create({
@@ -102,6 +126,9 @@ async function createLabel(req, res) {
       description,
       isActive,
       showInNav,
+      showOnHomepage,
+      homepageSortOrder,
+      homepageLimit,
       sortOrder,
       storefronts,
       isSystem: false,
@@ -176,6 +203,21 @@ async function updateLabel(req, res) {
     if (req.body?.showInNav != null) {
       label.showInNav = Boolean(req.body.showInNav);
     }
+    if (req.body?.showOnHomepage != null) {
+      label.showOnHomepage = Boolean(req.body.showOnHomepage);
+    }
+    if (req.body?.homepageSortOrder != null) {
+      label.homepageSortOrder = normalizeHomepageSortOrder(
+        req.body.homepageSortOrder,
+        label.homepageSortOrder ?? HOMEPAGE_SORT_DEFAULT
+      );
+    }
+    if (req.body?.homepageLimit != null) {
+      label.homepageLimit = normalizeHomepageLimit(
+        req.body.homepageLimit,
+        label.homepageLimit ?? HOMEPAGE_LIMIT_DEFAULT
+      );
+    }
     if (req.body?.sortOrder != null && Number.isFinite(Number(req.body.sortOrder))) {
       label.sortOrder = Number(req.body.sortOrder);
     }
@@ -235,13 +277,20 @@ async function deleteLabel(req, res) {
 }
 
 /**
- * Public: active labels for storefront nav / landing links.
- * Query: showInNavOnly=true (default) | false
+ * Public: active labels for storefront nav / homepage sections.
+ * Query:
+ *   showInNavOnly=true (default when not homepage) | false
+ *   showOnHomepageOnly=true — homepage sections (defaults showInNavOnly to false)
  */
 async function listLabelsPublic(req, res) {
   try {
     const storefront = req.storefront === 'wholesale' ? 'wholesale' : 'ecomm';
-    const showInNavOnly = String(req.query.showInNavOnly || 'true').toLowerCase() !== 'false';
+    const showOnHomepageOnly =
+      String(req.query.showOnHomepageOnly || '').toLowerCase() === 'true';
+    // Homepage filter is independent of nav; default showInNavOnly=false when homepage-only.
+    const showInNavDefault = showOnHomepageOnly ? 'false' : 'true';
+    const showInNavOnly =
+      String(req.query.showInNavOnly || showInNavDefault).toLowerCase() !== 'false';
 
     const filter = {
       isActive: true,
@@ -250,10 +299,19 @@ async function listLabelsPublic(req, res) {
     if (showInNavOnly) {
       filter.showInNav = true;
     }
+    if (showOnHomepageOnly) {
+      filter.showOnHomepage = true;
+    }
+
+    const sort = showOnHomepageOnly
+      ? { homepageSortOrder: 1, name: 1 }
+      : { sortOrder: 1, name: 1 };
 
     const labels = await ProductLabel.find(filter)
-      .select('name slug pagePath description sortOrder storefronts showInNav')
-      .sort({ sortOrder: 1, name: 1 })
+      .select(
+        'name slug pagePath description sortOrder storefronts showInNav showOnHomepage homepageSortOrder homepageLimit'
+      )
+      .sort(sort)
       .lean();
 
     return res.status(200).json({
@@ -279,7 +337,9 @@ async function getLabelPublic(req, res) {
       isActive: true,
       storefronts: storefront,
     })
-      .select('name slug pagePath description sortOrder storefronts')
+      .select(
+        'name slug pagePath description sortOrder storefronts showInNav showOnHomepage homepageSortOrder homepageLimit'
+      )
       .lean();
 
     if (!label) {
